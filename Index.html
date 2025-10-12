@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Click2Cash v3</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;font-family:"Poppins",sans-serif}
+    body{background:linear-gradient(135deg,#007bff,#00d4ff);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center}
+    .box{width:90%;max-width:420px;background:rgba(255,255,255,0.1);border-radius:20px;padding:25px;box-shadow:0 4px 15px rgba(0,0,0,0.3);text-align:center}
+    h1{margin-bottom:20px;font-size:28px}
+    input{width:100%;padding:10px;border-radius:10px;border:none;margin-bottom:15px;outline:none;font-size:16px}
+    button{width:100%;padding:12px;background:#00c3ff;border:none;border-radius:12px;font-size:16px;color:#fff;cursor:pointer;transition:0.3s}
+    button:hover{background:#009bd4}
+    .section{background:rgba(0,0,0,0.3);border-radius:15px;padding:15px;margin-bottom:20px;text-align:left}
+    .balance{font-size:24px;font-weight:bold;text-align:center;color:#00ffcc}
+    .footer{margin-top:15px;font-size:13px;opacity:0.8}
+    .btn-sm{background:#00ff99;color:black;border-radius:8px;padding:8px 12px;font-size:14px;cursor:pointer;margin-top:5px}
+    .btn-sm:hover{background:#00cc77}
+    table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}
+    th,td{border:1px solid rgba(255,255,255,0.2);padding:6px;text-align:center}
+    th{background:rgba(255,255,255,0.1)}
+  </style>
+</head>
+<body>
+
+<!-- LOGIN PAGE -->
+<div class="box" id="loginPage">
+  <h1>Click2Cash 🔐</h1>
+  <input type="text" id="username" placeholder="Enter Username">
+  <input type="password" id="password" placeholder="Enter Password">
+  <button onclick="login()">Login</button>
+  <p style="margin-top:10px;font-size:14px;opacity:0.8;">User: user/1234 | Admin: admin/4321</p>
+</div>
+
+<!-- USER DASHBOARD -->
+<div class="box" id="userDash" style="display:none;">
+  <h1>💰 Click2Cash</h1>
+
+  <div class="section">
+    <p><strong>Username:</strong> <span id="userName"></span></p>
+    <p><strong>Referrals:</strong> <span id="refCount">0</span></p>
+  </div>
+
+  <div class="section">
+    <p class="balance" id="balance">৳0</p>
+    <p style="text-align:center;">Minimum Withdraw: ৳100</p>
+    <button onclick="earn(10)">+ Earn ৳10</button>
+  </div>
+
+  <div class="section">
+    <h3>📺 Ads Earn</h3>
+    <p>Click ad to earn ৳5</p>
+    <button onclick="earn(5)">Watch Ad</button>
+  </div>
+
+  <div class="section">
+    <h3>👥 Referral</h3>
+    <div id="refLink" style="word-break:break-all;background:rgba(255,255,255,0.1);padding:8px;border-radius:10px;font-size:13px;"></div>
+    <button class="btn-sm" onclick="copyLink()">Copy Link</button>
+  </div>
+
+  <div class="section">
+    <h3>💸 Withdraw</h3>
+    <input type="number" id="withdrawAmount" placeholder="Enter amount">
+    <button onclick="withdraw()">Request Withdraw</button>
+    <p id="withdrawMsg" style="margin-top:8px;text-align:center;"></p>
+  </div>
+
+  <button onclick="logout()">🚪 Logout</button>
+  <div class="footer">© 2025 Click2Cash | All Rights Reserved</div>
+</div>
+
+<!-- ADMIN DASHBOARD -->
+<div class="box" id="adminDash" style="display:none;">
+  <h1>👑 Admin Panel</h1>
+
+  <div class="section">
+    <h3>Withdraw Requests</h3>
+    <table id="reqTable">
+      <tr><th>User</th><th>Amount</th><th>Status</th><th>Action</th></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h3>All Users</h3>
+    <table id="userTable">
+      <tr><th>User</th><th>Balance</th><th>Referrals</th></tr>
+    </table>
+  </div>
+
+  <button onclick="logout()">🚪 Logout</button>
+  <div class="footer">Admin: Click2Cash v3</div>
+</div>
+
+<script>
+function login(){
+  const u=document.getElementById("username").value.trim();
+  const p=document.getElementById("password").value.trim();
+
+  if(u==="user"&&p==="1234"){
+    localStorage.setItem("loggedIn","user");
+    if(!localStorage.getItem("balance"))localStorage.setItem("balance",250);
+    if(!localStorage.getItem("refCount"))localStorage.setItem("refCount",0);
+    showUser();
+  }
+  else if(u==="admin"&&p==="4321"){
+    localStorage.setItem("loggedIn","admin");
+    showAdmin();
+  }
+  else alert("❌ Invalid login!");
+}
+
+function showUser(){
+  document.getElementById("loginPage").style.display="none";
+  document.getElementById("userDash").style.display="block";
+  document.getElementById("userName").innerText="user";
+  updateUI();
+  generateRef();
+}
+
+function showAdmin(){
+  document.getElementById("loginPage").style.display="none";
+  document.getElementById("adminDash").style.display="block";
+  loadAdminData();
+}
+
+function updateUI(){
+  document.getElementById("balance").innerText="৳"+(localStorage.getItem("balance")||0);
+  document.getElementById("refCount").innerText=localStorage.getItem("refCount")||0;
+}
+
+function earn(a){
+  let bal=parseInt(localStorage.getItem("balance")||0);
+  bal+=a;
+  localStorage.setItem("balance",bal);
+  updateUI();
+}
+
+function withdraw(){
+  let bal=parseInt(localStorage.getItem("balance")||0);
+  const amt=parseInt(document.getElementById("withdrawAmount").value);
+  const msg=document.getElementById("withdrawMsg");
+  if(!amt||amt<=0){msg.innerText="❌ Enter valid amount.";return;}
+  if(amt<100){msg.innerText="⚠️ Minimum ৳100.";return;}
+  if(amt>bal){msg.innerText="❌ Insufficient balance.";return;}
+
+  bal-=amt;
+  localStorage.setItem("balance",bal);
+  updateUI();
+  msg.innerText="✅ Withdraw request sent!";
+  // save request
+  let reqs=JSON.parse(localStorage.getItem("requests")||"[]");
+  reqs.push({user:"user",amount:amt,status:"Pending"});
+  localStorage.setItem("requests",JSON.stringify(reqs));
+}
+
+function generateRef(){
+  const ref=`${window.location.origin}?ref=user`;
+  document.getElementById("refLink").innerText=ref;
+}
+
+function copyLink(){
+  navigator.clipboard.writeText(document.getElementById("refLink").innerText);
+  alert("Referral link copied!");
+}
+
+function loadAdminData(){
+  const rTable=document.getElementById("reqTable");
+  const uTable=document.getElementById("userTable");
+  rTable.innerHTML="<tr><th>User</th><th>Amount</th><th>Status</th><th>Action</th></tr>";
+  uTable.innerHTML="<tr><th>User</th><th>Balance</th><th>Referrals</th></tr>";
+  let reqs=JSON.parse(localStorage.getItem("requests")||"[]");
+  let bal=localStorage.getItem("balance")||0;
+  let refs=localStorage.getItem("refCount")||0;
+  uTable.innerHTML+=`<tr><td>user</td><td>৳${bal}</td><td>${refs}</td></tr>`;
+  reqs.forEach((r,i)=>{
+    rTable.innerHTML+=`
+      <tr>
+        <td>${r.user}</td>
+        <td>৳${r.amount}</td>
+        <td>${r.status}</td>
+        <td>
+          ${r.status==="Pending"
+            ?`<button class='btn-sm' onclick='approve(${i})'>Approve</button>
+               <button class='btn-sm' onclick='reject(${i})'>Reject</button>`
+            :"—"}
+        </td>
+      </tr>`;
+  });
+}
+
+function approve(i){
+  let reqs=JSON.parse(localStorage.getItem("requests"));
+  reqs[i].status="✅ Approved";
+  localStorage.setItem("requests",JSON.stringify(reqs));
+  loadAdminData();
+}
+
+function reject(i){
+  let reqs=JSON.parse(localStorage.getItem("requests"));
+  reqs[i].status="❌ Rejected";
+  localStorage.setItem("requests",JSON.stringify(reqs));
+  loadAdminData();
+}
+
+function logout(){
+  localStorage.removeItem("loggedIn");
+  location.reload();
+}
+
+window.onload=function(){
+  const logged=localStorage.getItem("loggedIn");
+  if(logged==="user")showUser();
+  else if(logged==="admin")showAdmin();
+}
+</script>
+</body>
+</html>
